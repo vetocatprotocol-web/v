@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Request } from '@nestjs/common';
 import { AgentsService } from './agents.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -8,9 +8,8 @@ export class AgentsController {
 
   @Post()
   @UseGuards(JwtAuthGuard)
-  create(@Body() createAgentDto: any) {
-    // For now, creatorId from JWT would be passed, but simplified
-    return this.agentsService.create(createAgentDto, 'creator-id-placeholder');
+  create(@Body() createAgentDto: any, @Request() req) {
+    return this.agentsService.create(createAgentDto, req.user.userId);
   }
 
   @Get()

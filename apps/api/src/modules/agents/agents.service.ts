@@ -2,12 +2,14 @@ import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { agents } from '../../database/schema';
 import { eq, desc, and } from 'drizzle-orm';
+import { EventsGateway } from '../events/events.gateway';
 import { DATABASE_CONNECTION } from '../../database/database.module';
 
 @Injectable()
 export class AgentsService {
   constructor(
     @Inject(DATABASE_CONNECTION) private db: ReturnType<typeof drizzle>,
+    private eventsGateway: EventsGateway,
   ) {}
 
   async create(createAgentDto: {
@@ -94,15 +96,30 @@ export class AgentsService {
     return deleted[0];
   }
 
-  async executeAgent(agentId: string, taskInput: any) {
+  async executeAgent(agentId: string, taskInput: any, workspaceId?: string, taskId?: string) {
     const agent = await this.findOne(agentId);
 
     // For now, simulate agent execution
     // In real implementation, this would call the actual AI agent
     console.log(`Executing agent ${agent.name} with input:`, taskInput);
 
-    // Simulate processing time
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    // Simulate agent thinking and steps
+    if (workspaceId && taskId) {
+      this.eventsGateway.emitAgentThinking(workspaceId, taskId, 'Analyzing input...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      this.eventsGateway.emitAgentStep(workspaceId, taskId, 1, 3, 'Processing data...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      this.eventsGateway.emitAgentStep(workspaceId, taskId, 2, 3, 'Generating response...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      this.eventsGateway.emitAgentStep(workspaceId, taskId, 3, 3, 'Finalizing output...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    } else {
+      // Simulate processing time
+      await new Promise(resolve => setTimeout(resolve, 3000));
+    }
 
     return {
       output: {

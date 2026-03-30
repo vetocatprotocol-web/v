@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { tasks, workspaces, workspaceMembers, agents } from '../../database/schema';
 import { eq, and, desc, inArray } from 'drizzle-orm';
 import { AgentsService } from '../agents/agents.service';
+import { EventsGateway } from '../events/events.gateway';
 import { DATABASE_CONNECTION } from '../../database/database.module';
 
 @Injectable()
@@ -10,6 +11,7 @@ export class TasksService {
   constructor(
     @Inject(DATABASE_CONNECTION) private db: ReturnType<typeof drizzle>,
     private agentsService: AgentsService,
+    private eventsGateway: EventsGateway,
   ) {}
 
   async create(createTaskDto: {
@@ -19,6 +21,7 @@ export class TasksService {
     type?: string;
     priority?: string;
     input?: any;
+    agentId?: string;
     assignedTo?: string;
   }, userId: string) {
     // Verify user has access to workspace
@@ -38,9 +41,12 @@ export class TasksService {
       type: createTaskDto.type as any || 'manual',
       priority: createTaskDto.priority as any || 'medium',
       input: createTaskDto.input || {},
+      agentId: createTaskDto.agentId || null,
       assignedTo: createTaskDto.assignedTo,
       createdBy: userId,
     }).returning();
+
+    console.log('Created task:', newTask[0]);
 
     return newTask[0];
   }
@@ -137,13 +143,25 @@ export class TasksService {
       startedAt: new Date(),
     });
 
+    // Emit task status change
+    this.eventsGateway.emitTaskStatusChanged(task.workspaceId, id, 'running', task.status);
+
     try {
       let result;
 
       if (task.type === 'agent' && task.agentId) {
+        // Emit agent started
+        this.eventsGateway.emitAgentStarted(task.workspaceId, id, task.agentId);
+
         // Execute AI agent
-        result = await this.agentsService.executeAgent(task.agentId, task.input);
+        result = await this.agentsService.executeAgent(task.agentId, task.input, task.workspaceId, id);
+
+        // Emit agent completed
+        this.eventsGateway.emitAgentCompleted(task.workspaceId, id, task.agentId, result.output);
       } else {
+        // Emit task progress
+        this.eventsGateway.emitTaskProgress(task.workspaceId, id, 50, 'Processing manual task...');
+
         // Simulate manual task execution
         await new Promise(resolve => setTimeout(resolve, 2000));
         result = {
@@ -165,12 +183,19 @@ export class TasksService {
         tokensOutput: result.output?.tokensUsed || 0,
       });
 
+      // Emit task completed
+      this.eventsGateway.emitTaskCompleted(task.workspaceId, id, result.output, result.cost);
+
       return { message: 'Task completed successfully', result };
     } catch (error) {
       await this.update(id, {
         status: 'failed',
         error: { message: error.message },
       });
+
+      // Emit task failed
+      this.eventsGateway.emitTaskFailed(task.workspaceId, id, error);
+
       throw error;
     }
   }

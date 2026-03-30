@@ -6,6 +6,8 @@ import { UsersModule } from './modules/users/users.module';
 import { WorkspacesModule } from './modules/workspaces/workspaces.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { AgentsModule } from './modules/agents/agents.module';
+import { FilesModule } from './modules/files/files.module';
+import { EventsModule } from './modules/events/events.module';
 
 @Module({
   imports: [
@@ -16,6 +18,8 @@ import { AgentsModule } from './modules/agents/agents.module';
     WorkspacesModule,
     TasksModule,
     AgentsModule,
+    FilesModule,
+    EventsModule,
   ],
 })
 export class AppModule {}
