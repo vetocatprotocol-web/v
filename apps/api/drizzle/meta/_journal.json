@@ -1,0 +1,34 @@
+{
+  "version": "5",
+  "dialect": "pg",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1774896628493,
+      "tag": "0000_low_talisman",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1774896938459,
+      "tag": "0001_volatile_rictor",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1774897053911,
+      "tag": "0002_complete_zarek",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1774897083420,
+      "tag": "0003_nebulous_plazm",
+      "breakpoints": true
+    }
+  ]
+}

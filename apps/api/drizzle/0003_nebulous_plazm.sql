@@ -1,0 +1,1 @@
+ALTER TABLE "agents" ALTER COLUMN "permissions" DROP DEFAULT;
