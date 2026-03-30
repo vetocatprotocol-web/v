@@ -1,0 +1,1950 @@
+openapi: 3.0.3
+info:
+  title: KARYO OS — API Specification
+  description: |
+    Complete API specification for Karyo OS AI-Powered Work Operating System.
+    Covers authentication, workspaces, tasks, agents, files, memory, integrations, and billing.
+  version: 1.0.0
+  contact:
+    name: Karyo OS Team
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:3001/api/v1
+    description: Local Development
+  - url: https://api.karyo-os.com/v1
+    description: Production
+  - url: https://api-staging.karyo-os.com/v1
+    description: Staging
+
+tags:
+  - name: Auth
+    description: Authentication & session management
+  - name: Users
+    description: User profile & settings
+  - name: Workspaces
+    description: Workspace management & membership
+  - name: Tasks
+    description: Task CRUD & execution
+  - name: Agents
+    description: AI agent management & execution
+  - name: Files
+    description: File upload, storage & processing
+  - name: Memory
+    description: AI memory & behavioral learning
+  - name: Integrations
+    description: Third-party service connections
+  - name: Billing
+    description: Subscription & usage billing
+  - name: Marketplace
+    description: Agent marketplace
+  - name: System
+    description: Health checks & system status
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+  schemas:
+    # ─── Common ───────────────────────────────────────
+    PaginationMeta:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        per_page:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 150
+        total_pages:
+          type: integer
+          example: 8
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: "E1001"
+            message:
+              type: string
+              example: "Resource not found"
+            details:
+              type: object
+        request_id:
+          type: string
+          format: uuid
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+        request_id:
+          type: string
+          format: uuid
+
+    # ─── Auth ─────────────────────────────────────────
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+
+    RegisterRequest:
+      type: object
+      required: [email, password, name]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        name:
+          type: string
+        workspace_name:
+          type: string
+
+    AuthResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        expires_in:
+          type: integer
+          example: 3600
+        user:
+          $ref: '#/components/schemas/User'
+
+    # ─── User ─────────────────────────────────────────
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        avatar_url:
+          type: string
+          format: uri
+        role:
+          type: string
+          enum: [user, admin, super_admin]
+        locale:
+          type: string
+          example: "id"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    # ─── Workspace ────────────────────────────────────
+    Workspace:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        owner_id:
+          type: string
+          format: uuid
+        plan:
+          type: string
+          enum: [free, pro, enterprise]
+        member_count:
+          type: integer
+        storage_used_bytes:
+          type: integer
+        ai_tasks_today:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    WorkspaceMember:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        user:
+          $ref: '#/components/schemas/User'
+        role:
+          type: string
+          enum: [owner, admin, editor, viewer]
+        joined_at:
+          type: string
+          format: date-time
+
+    # ─── Task ─────────────────────────────────────────
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [manual, agent, workflow]
+        status:
+          type: string
+          enum: [pending, queued, running, completed, failed, cancelled]
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+        input:
+          type: object
+        output:
+          type: object
+        agent_id:
+          type: string
+          format: uuid
+          nullable: true
+        assigned_to:
+          type: string
+          format: uuid
+          nullable: true
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        error:
+          type: object
+          nullable: true
+        created_by:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    # ─── Agent ────────────────────────────────────────
+    Agent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [executor, analyst, data, custom]
+        version:
+          type: string
+          example: "1.2.3"
+        status:
+          type: string
+          enum: [active, inactive, deprecated]
+        config:
+          type: object
+        permissions:
+          type: array
+          items:
+            type: string
+        price_per_execution:
+          type: number
+          format: float
+        is_marketplace:
+          type: boolean
+        creator_id:
+          type: string
+          format: uuid
+        rating:
+          type: number
+          format: float
+        execution_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    # ─── File ─────────────────────────────────────────
+    File:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        original_name:
+          type: string
+        mime_type:
+          type: string
+        size_bytes:
+          type: integer
+        path:
+          type: string
+        url:
+          type: string
+          format: uri
+        ai_processed:
+          type: boolean
+        ai_summary:
+          type: string
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+        version:
+          type: integer
+        created_by:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+
+    # ─── Memory ───────────────────────────────────────
+    MemoryEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [behavior, preference, pattern, context]
+        key:
+          type: string
+          example: "report_format_preference"
+        value:
+          type: object
+        confidence:
+          type: number
+          format: float
+        source:
+          type: string
+          enum: [observed, explicit, inferred]
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    # ─── Integration ─────────────────────────────────
+    Integration:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        provider:
+          type: string
+          enum: [google_drive, slack, gmail, airtable, stripe, dropbox]
+        status:
+          type: string
+          enum: [connected, disconnected, error, syncing]
+        display_name:
+          type: string
+        connected_by:
+          type: string
+          format: uuid
+        last_synced_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    # ─── Billing ─────────────────────────────────────
+    Subscription:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        plan:
+          type: string
+          enum: [free, pro, enterprise]
+        status:
+          type: string
+          enum: [active, cancelled, past_due, trialing]
+        current_period_start:
+          type: string
+          format: date-time
+        current_period_end:
+          type: string
+          format: date-time
+        monthly_cost_usd:
+          type: number
+          format: float
+
+    UsageSummary:
+      type: object
+      properties:
+        period:
+          type: string
+          example: "2026-03"
+        ai_tasks:
+          type: integer
+        ai_cost_usd:
+          type: number
+          format: float
+        storage_used_gb:
+          type: number
+          format: float
+        api_calls:
+          type: integer
+        budget_limit_usd:
+          type: number
+          format: float
+        budget_used_percent:
+          type: number
+          format: float
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
+    PerPageParam:
+      name: per_page
+      in: query
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+    WorkspaceIdParam:
+      name: X-Workspace-Id
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Active workspace ID
+
+security:
+  - BearerAuth: []
+
+paths:
+  # ═══════════════════════════════════════════════════
+  # AUTH
+  # ═══════════════════════════════════════════════════
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register new user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          description: Email already exists
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout (invalidate session)
+      responses:
+        '200':
+          description: Logged out
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current user
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+
+  # ═══════════════════════════════════════════════════
+  # USERS
+  # ═══════════════════════════════════════════════════
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Get my profile
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+
+    patch:
+      tags: [Users]
+      summary: Update my profile
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                avatar_url:
+                  type: string
+                locale:
+                  type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+
+  /users/me/data-export:
+    post:
+      tags: [Users]
+      summary: Export all user data (GDPR)
+      responses:
+        '202':
+          description: Export queued, will be emailed
+
+  /users/me/data:
+    delete:
+      tags: [Users]
+      summary: Delete all user data (GDPR Right to Erasure)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirmation]
+              properties:
+                confirmation:
+                  type: string
+                  description: Must be "DELETE MY DATA"
+      responses:
+        '202':
+          description: Deletion queued
+
+  # ═══════════════════════════════════════════════════
+  # WORKSPACES
+  # ═══════════════════════════════════════════════════
+  /workspaces:
+    get:
+      tags: [Workspaces]
+      summary: List my workspaces
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Workspace'
+
+    post:
+      tags: [Workspaces]
+      summary: Create workspace
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                slug:
+                  type: string
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Workspace'
+
+  /workspaces/{workspace_id}:
+    get:
+      tags: [Workspaces]
+      summary: Get workspace detail
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Workspace'
+
+    patch:
+      tags: [Workspaces]
+      summary: Update workspace
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Workspace'
+
+    delete:
+      tags: [Workspaces]
+      summary: Delete workspace
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Deleted
+
+  /workspaces/{workspace_id}/members:
+    get:
+      tags: [Workspaces]
+      summary: List workspace members
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WorkspaceMember'
+
+    post:
+      tags: [Workspaces]
+      summary: Invite member
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, role]
+              properties:
+                email:
+                  type: string
+                  format: email
+                role:
+                  type: string
+                  enum: [admin, editor, viewer]
+      responses:
+        '201':
+          description: Invitation sent
+
+  /workspaces/{workspace_id}/members/{user_id}:
+    patch:
+      tags: [Workspaces]
+      summary: Update member role
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role:
+                  type: string
+                  enum: [admin, editor, viewer]
+      responses:
+        '200':
+          description: Role updated
+
+    delete:
+      tags: [Workspaces]
+      summary: Remove member
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Removed
+
+  # ═══════════════════════════════════════════════════
+  # TASKS
+  # ═══════════════════════════════════════════════════
+  /tasks:
+    get:
+      tags: [Tasks]
+      summary: List tasks
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, queued, running, completed, failed, cancelled]
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [manual, agent, workflow]
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [created_at, -created_at, priority, -priority]
+            default: "-created_at"
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Tasks'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+
+    post:
+      tags: [Tasks]
+      summary: Create task
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, type]
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                type:
+                  type: string
+                  enum: [manual, agent, workflow]
+                priority:
+                  type: string
+                  enum: [low, medium, high, urgent]
+                  default: medium
+                input:
+                  type: object
+                agent_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+                file_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Task'
+
+  /tasks/{task_id}:
+    get:
+      tags: [Tasks]
+      summary: Get task detail
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Task'
+
+    patch:
+      tags: [Tasks]
+      summary: Update task
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                status:
+                  type: string
+                  enum: [pending, cancelled]
+                priority:
+                  type: string
+                  enum: [low, medium, high, urgent]
+                input:
+                  type: object
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Task'
+
+    delete:
+      tags: [Tasks]
+      summary: Delete task
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Deleted
+
+  /tasks/{task_id}/execute:
+    post:
+      tags: [Tasks]
+      summary: Execute task (trigger AI agent or manual workflow)
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mode:
+                  type: string
+                  enum: [auto, manual]
+                  default: auto
+                agent_override:
+                  type: string
+                  format: uuid
+                  nullable: true
+      responses:
+        '202':
+          description: Task queued for execution
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Task'
+
+  /tasks/{task_id}/cancel:
+    post:
+      tags: [Tasks]
+      summary: Cancel running task
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Task cancelled
+
+  # ═══════════════════════════════════════════════════
+  # COMMAND (Core AI Router)
+  # ═══════════════════════════════════════════════════
+  /command:
+    post:
+      tags: [Tasks]
+      summary: Natural language command — core Karyo interaction
+      description: |
+        Parses natural language input and routes to appropriate handler.
+        This is the primary user interaction layer.
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [input]
+              properties:
+                input:
+                  type: string
+                  example: "Buat laporan penjualan dari file sales_q3.csv"
+                context:
+                  type: object
+                  properties:
+                    file_ids:
+                      type: array
+                      items:
+                        type: string
+                        format: uuid
+                    integration_ids:
+                      type: array
+                      items:
+                        type: string
+                        format: uuid
+                    mode:
+                      type: string
+                      enum: [auto, manual, agent]
+                      default: auto
+      responses:
+        '202':
+          description: Command accepted, task created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      task_id:
+                        type: string
+                        format: uuid
+                      interpretation:
+                        type: object
+                        properties:
+                          mode:
+                            type: string
+                          intent:
+                            type: string
+                          agent:
+                            type: string
+                          confidence:
+                            type: number
+                            format: float
+
+  # ═══════════════════════════════════════════════════
+  # AGENTS
+  # ═══════════════════════════════════════════════════
+  /agents:
+    get:
+      tags: [Agents]
+      summary: List available agents
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [executor, analyst, data, custom]
+        - name: is_marketplace
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Agent'
+
+    post:
+      tags: [Agents]
+      summary: Create custom agent
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, type, config]
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                type:
+                  type: string
+                  enum: [executor, analyst, data, custom]
+                config:
+                  type: object
+                  properties:
+                    system_prompt:
+                      type: string
+                    model_preference:
+                      type: string
+                    tools:
+                      type: array
+                      items:
+                        type: string
+                    max_execution_time:
+                      type: integer
+                      description: seconds
+                permissions:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Agent'
+
+  /agents/{agent_id}:
+    get:
+      tags: [Agents]
+      summary: Get agent detail
+      parameters:
+        - name: agent_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Agent'
+
+    patch:
+      tags: [Agents]
+      summary: Update agent
+      parameters:
+        - name: agent_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Agent'
+
+    delete:
+      tags: [Agents]
+      summary: Delete agent
+      parameters:
+        - name: agent_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Deleted
+
+  /agents/{agent_id}/versions:
+    get:
+      tags: [Agents]
+      summary: List agent versions
+      parameters:
+        - name: agent_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        version:
+                          type: string
+                        changelog:
+                          type: string
+                        status:
+                          type: string
+                        published_at:
+                          type: string
+                          format: date-time
+
+  # ═══════════════════════════════════════════════════
+  # FILES
+  # ═══════════════════════════════════════════════════
+  /files:
+    get:
+      tags: [Files]
+      summary: List files
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+        - name: mime_type
+          in: query
+          schema:
+            type: string
+        - name: ai_processed
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/File'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+
+    post:
+      tags: [Files]
+      summary: Upload file
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                tags:
+                  type: string
+                  description: Comma-separated tags
+                auto_process:
+                  type: boolean
+                  default: true
+                  description: Trigger AI processing after upload
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/File'
+
+  /files/{file_id}:
+    get:
+      tags: [Files]
+      summary: Get file detail
+      parameters:
+        - name: file_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/File'
+
+    delete:
+      tags: [Files]
+      summary: Delete file
+      parameters:
+        - name: file_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Deleted
+
+  /files/{file_id}/process:
+    post:
+      tags: [Files]
+      summary: Trigger AI processing for file
+      parameters:
+        - name: file_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                operations:
+                  type: array
+                  items:
+                    type: string
+                    enum: [summarize, extract_data, classify, translate, analyze]
+      responses:
+        '202':
+          description: Processing queued
+
+  /files/{file_id}/download:
+    get:
+      tags: [Files]
+      summary: Get download URL (presigned)
+      parameters:
+        - name: file_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      url:
+                        type: string
+                        format: uri
+                      expires_in:
+                        type: integer
+                        example: 3600
+
+  # ═══════════════════════════════════════════════════
+  # MEMORY
+  # ═══════════════════════════════════════════════════
+  /memory:
+    get:
+      tags: [Memory]
+      summary: Get user memory entries
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [behavior, preference, pattern, context]
+        - name: key
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MemoryEntry'
+
+    post:
+      tags: [Memory]
+      summary: Store memory entry (explicit)
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, key, value]
+              properties:
+                type:
+                  type: string
+                  enum: [preference, context]
+                key:
+                  type: string
+                value:
+                  type: object
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/MemoryEntry'
+
+  /memory/search:
+    post:
+      tags: [Memory]
+      summary: Semantic search in memory
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [query]
+              properties:
+                query:
+                  type: string
+                  example: "format laporan yang biasa saya pakai"
+                limit:
+                  type: integer
+                  default: 5
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MemoryEntry'
+
+  /memory/{memory_id}:
+    delete:
+      tags: [Memory]
+      summary: Delete memory entry
+      parameters:
+        - name: memory_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Deleted
+
+  # ═══════════════════════════════════════════════════
+  # INTEGRATIONS
+  # ═══════════════════════════════════════════════════
+  /integrations:
+    get:
+      tags: [Integrations]
+      summary: List connected integrations
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Integration'
+
+  /integrations/{provider}/connect:
+    post:
+      tags: [Integrations]
+      summary: Initiate OAuth connection
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [google_drive, slack, gmail, airtable, stripe, dropbox]
+      responses:
+        '200':
+          description: OAuth URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      oauth_url:
+                        type: string
+                        format: uri
+                      state:
+                        type: string
+
+  /integrations/{provider}/callback:
+    post:
+      tags: [Integrations]
+      summary: OAuth callback handler
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, state]
+              properties:
+                code:
+                  type: string
+                state:
+                  type: string
+      responses:
+        '200':
+          description: Connected
+
+  /integrations/{integration_id}/sync:
+    post:
+      tags: [Integrations]
+      summary: Trigger manual sync
+      parameters:
+        - name: integration_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '202':
+          description: Sync queued
+
+  /integrations/{integration_id}:
+    delete:
+      tags: [Integrations]
+      summary: Disconnect integration
+      parameters:
+        - name: integration_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Disconnected
+
+  # ═══════════════════════════════════════════════════
+  # BILLING
+  # ═══════════════════════════════════════════════════
+  /billing/subscription:
+    get:
+      tags: [Billing]
+      summary: Get current subscription
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Subscription'
+
+  /billing/subscription:
+    put:
+      tags: [Billing]
+      summary: Change subscription plan
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plan]
+              properties:
+                plan:
+                  type: string
+                  enum: [free, pro, enterprise]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Subscription'
+
+  /billing/usage:
+    get:
+      tags: [Billing]
+      summary: Get usage summary
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+        - name: period
+          in: query
+          schema:
+            type: string
+            example: "2026-03"
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/UsageSummary'
+
+  /billing/budget:
+    put:
+      tags: [Billing]
+      summary: Set AI cost budget
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [limit_usd]
+              properties:
+                limit_usd:
+                  type: number
+                  format: float
+                alert_thresholds:
+                  type: array
+                  items:
+                    type: integer
+                  example: [50, 75, 90, 100]
+                action_on_limit:
+                  type: string
+                  enum: [block, downgrade_to_economy, notify_only]
+      responses:
+        '200':
+          description: Budget updated
+
+  # ═══════════════════════════════════════════════════
+  # MARKETPLACE
+  # ═══════════════════════════════════════════════════
+  /marketplace/agents:
+    get:
+      tags: [Marketplace]
+      summary: Browse marketplace agents
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [finance, marketing, data, hr, legal, productivity]
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [popular, rating, newest, price]
+            default: popular
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Agent'
+
+  /marketplace/agents/{agent_id}/install:
+    post:
+      tags: [Marketplace]
+      summary: Install marketplace agent to workspace
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceIdParam']
+        - name: agent_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Agent installed
+
+  # ═══════════════════════════════════════════════════
+  # SYSTEM
+  # ═══════════════════════════════════════════════════
+  /health:
+    get:
+      tags: [System]
+      summary: Health check
+      security: []
+      responses:
+        '200':
+          description: System healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+                  version:
+                    type: string
+                    example: "1.0.0"
+                  uptime:
+                    type: integer
+                  services:
+                    type: object
+                    properties:
+                      database:
+                        type: string
+                        example: "ok"
+                      redis:
+                        type: string
+                        example: "ok"
+                      queue:
+                        type: string
+                        example: "ok"
+                      ai:
+                        type: string
+                        example: "ok"
+
+  /status:
+    get:
+      tags: [System]
+      summary: Detailed system status
+      security: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version:
+                    type: string
+                  environment:
+                    type: string
+                  services:
+                    type: object
+                  metrics:
+                    type: object
+                    properties:
+                      active_tasks:
+                        type: integer
+                      queue_depth:
+                        type: integer
+                      avg_response_time_ms:
+                        type: number
+
+components:
+  responses:
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error:
+              code: "E0001"
+              message: "Validation failed"
+              details:
+                field: "email"
+                reason: "Invalid email format"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error:
+              code: "E1001"
+              message: "Resource not found"
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error:
+              code: "E2001"
+              message: "Authentication required"
+    RateLimited:
+      description: Rate limit exceeded
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error:
+              code: "E3001"
+              message: "Rate limit exceeded. Retry after 60 seconds."
