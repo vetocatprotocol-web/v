@@ -35,6 +35,24 @@ export class UsersService {
     return updated[0];
   }
 
+  async deleteUserData(userId: string) {
+    // TODO: Deep deletion of all related records (workspaces, tasks, files, etc.)
+    const deleted = await this.db.delete(users).where(eq(users.id, userId)).returning();
+    if (!deleted[0]) {
+      throw new NotFoundException('User not found');
+    }
+    return { message: 'User data deletion queued' };
+  }
+
+  async exportUserData(userId: string) {
+    // TODO: Implement asynchronous export and email to user
+    const user = await this.findOne(userId);
+    return {
+      message: 'User data export queued',
+      payload: user,
+    };
+  }
+
   async remove(id: string) {
     const deleted = await this.db.delete(users).where(eq(users.id, id)).returning();
     if (!deleted[0]) {

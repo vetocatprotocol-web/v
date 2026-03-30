@@ -13,7 +13,7 @@ import { Logger, UseGuards } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { workspaces, workspaceMembers } from '../../database/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { DATABASE_CONNECTION } from '../../database/database.module';
 
 interface AuthenticatedSocket extends Socket {
@@ -58,7 +58,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // Check workspace access
       const member = await this.db.select()
         .from(workspaceMembers)
-        .where(eq(workspaceMembers.workspaceId, workspaceId) && eq(workspaceMembers.userId, userId))
+        .where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, userId)))
         .limit(1);
 
       if (!member[0]) {

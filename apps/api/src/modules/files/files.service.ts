@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { Inject } from '@nestjs/common';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { files, workspaces, workspaceMembers } from '../../database/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, inArray } from 'drizzle-orm';
 import { EventsGateway } from '../events/events.gateway';
 import { DATABASE_CONNECTION } from '../../database/database.module';
 import * as fs from 'fs';
@@ -89,8 +89,7 @@ export class FilesService {
 
       const workspaceIds = userWorkspaces.map(w => w.id);
       if (workspaceIds.length > 0) {
-        // Note: This would need proper array handling in Drizzle
-        // For now, we'll filter in memory
+        conditions.push(inArray(files.workspaceId, workspaceIds));
       } else {
         return [];
       }
@@ -104,7 +103,11 @@ export class FilesService {
       conditions.push(eq(files.aiProcessed, filters.aiProcessed));
     }
 
-    return this.db.select().from(files).where(and(...conditions)).orderBy(desc(files.createdAt));
+    if (conditions.length > 0) {
+      return this.db.select().from(files).where(and(...conditions)).orderBy(desc(files.createdAt));
+    }
+
+    return this.db.select().from(files).orderBy(desc(files.createdAt));
   }
 
   async findOne(id: string, userId?: string) {

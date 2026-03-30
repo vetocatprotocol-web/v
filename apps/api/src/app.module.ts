@@ -8,6 +8,11 @@ import { TasksModule } from './modules/tasks/tasks.module';
 import { AgentsModule } from './modules/agents/agents.module';
 import { FilesModule } from './modules/files/files.module';
 import { EventsModule } from './modules/events/events.module';
+import { MemoryModule } from './modules/memory/memory.module';
+import { IntegrationsModule } from './modules/integrations/integrations.module';
+import { BillingModule } from './modules/billing/billing.module';
+import { SystemModule } from './modules/system/system.module';
+import { MarketplaceModule } from './modules/marketplace/marketplace.module';
 
 @Module({
   imports: [
@@ -20,6 +25,11 @@ import { EventsModule } from './modules/events/events.module';
     AgentsModule,
     FilesModule,
     EventsModule,
+    MemoryModule,
+    IntegrationsModule,
+    BillingModule,
+    SystemModule,
+    MarketplaceModule,
   ],
 })
 export class AppModule {}

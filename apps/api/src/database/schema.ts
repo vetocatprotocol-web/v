@@ -38,6 +38,9 @@ export const workspaces = pgTable('workspaces', {
   ownerId: uuid('owner_id').notNull().references(() => users.id, { onDelete: 'restrict' }),
   plan: planType('plan').notNull().default('free'),
   settings: jsonb('settings').default({}),
+  billingBudgetUsd: decimal('billing_budget_usd', { precision: 10, scale: 2 }).default('0'),
+  billingAlertThresholds: integer('billing_alert_thresholds').array().default([50, 75, 90, 100]),
+  billingActionOnLimit: varchar('billing_action_on_limit', { length: 50 }).default('notify_only'),
   storageUsedBytes: bigint('storage_used_bytes', { mode: 'number' }).default(0),
   aiTasksToday: integer('ai_tasks_today').default(0),
   aiTasksResetAt: timestamp('ai_tasks_reset_at', { withTimezone: true }).defaultNow(),
@@ -117,4 +120,38 @@ export const files = pgTable('files', {
   uploadedBy: uuid('uploaded_by').notNull().references(() => users.id),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const memory = pgTable('memory', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  workspaceId: uuid('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  type: memoryType('type').notNull(),
+  key: varchar('key', { length: 255 }).notNull(),
+  value: jsonb('value').notNull(),
+  source: memorySource('source').notNull().default('explicit'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const integrations = pgTable('integrations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  workspaceId: uuid('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  provider: integrationProvider('provider').notNull(),
+  status: integrationStatus('status').notNull().default('disconnected'),
+  config: jsonb('config').default({}),
+  accessToken: varchar('access_token', { length: 500 }),
+  refreshToken: varchar('refresh_token', { length: 500 }),
+  syncStatus: integrationStatus('sync_status').default('disconnected'),
+  lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const workspaceAgents = pgTable('workspace_agents', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  workspaceId: uuid('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  agentId: uuid('agent_id').notNull().references(() => agents.id, { onDelete: 'cascade' }),
+  installedBy: uuid('installed_by').notNull().references(() => users.id),
+  installedAt: timestamp('installed_at', { withTimezone: true }).defaultNow(),
 });

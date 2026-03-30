@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
 import { drizzle } from 'drizzle-orm/postgres-js';
-import { workspaces, workspaceMembers } from '../../database/schema';
+import { workspaces, workspaceMembers, users } from '../../database/schema';
 import { eq, and } from 'drizzle-orm';
 import { DATABASE_CONNECTION } from '../../database/database.module';
 
@@ -77,9 +77,66 @@ export class WorkspacesService {
     }).returning();
   }
 
+  async listMembers(workspaceId: string) {
+    return this.db.select({ member: workspaceMembers, user: users })
+      .from(workspaceMembers)
+      .innerJoin(users, eq(workspaceMembers.userId, users.id))
+      .where(eq(workspaceMembers.workspaceId, workspaceId));
+  }
+
   async removeMember(workspaceId: string, userId: string) {
     return this.db.delete(workspaceMembers)
       .where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, userId)))
       .returning();
+  }
+
+  async incrementAiTasks(workspaceId: string, count = 1) {
+    const workspace = await this.findOne(workspaceId);
+    const updated = await this.db.update(workspaces).set({
+      aiTasksToday: Number(workspace.aiTasksToday || 0) + count,
+      updatedAt: new Date(),
+    }).where(eq(workspaces.id, workspaceId)).returning();
+
+    return updated[0];
+  }
+
+  async resetAiTasksIfNeeded(workspaceId: string) {
+    const workspace = await this.findOne(workspaceId);
+    const now = new Date();
+
+    if (!workspace.aiTasksResetAt || new Date(workspace.aiTasksResetAt).getTime() <= now.getTime()) {
+      const nextReset = new Date(now);
+      nextReset.setUTCDate(nextReset.getUTCDate() + 1);
+      nextReset.setUTCHours(0, 0, 0, 0);
+
+      await this.db.update(workspaces).set({
+        aiTasksToday: 0,
+        aiTasksResetAt: nextReset,
+        updatedAt: new Date(),
+      }).where(eq(workspaces.id, workspaceId));
+    }
+  }
+
+  async getAiQuotaLimit(plan?: string) {
+    const limits: Record<string, number> = {
+      free: 20,
+      pro: 200,
+      enterprise: 2000,
+    };
+    return plan && limits[plan] ? limits[plan] : limits.free;
+  }
+
+  async ensureAiTaskAllowed(workspaceId: string) {
+    await this.resetAiTasksIfNeeded(workspaceId);
+
+    const workspace = await this.findOne(workspaceId);
+    const limit = await this.getAiQuotaLimit(workspace.plan);
+    const usage = Number(workspace.aiTasksToday || 0);
+
+    if (usage >= limit) {
+      throw new BadRequestException(`AI task quota exceeded for plan ${workspace.plan} (limit ${limit} per day)`);
+    }
+
+    return { usage, limit };
   }
 }

@@ -45,6 +45,12 @@ export class WorkspacesController {
     return this.workspacesService.remove(id);
   }
 
+  @Get(':id/members')
+  @UseGuards(JwtAuthGuard)
+  listMembers(@Param('id') id: string) {
+    return this.workspacesService.listMembers(id);
+  }
+
   @Post(':id/members')
   @UseGuards(JwtAuthGuard)
   addMember(@Param('id') id: string, @Body() body: { userId: string; role?: string }) {
@@ -55,5 +61,18 @@ export class WorkspacesController {
   @UseGuards(JwtAuthGuard)
   removeMember(@Param('id') id: string, @Param('userId') userId: string) {
     return this.workspacesService.removeMember(id, userId);
+  }
+
+  @Get(':id/usage')
+  @UseGuards(JwtAuthGuard)
+  async getUsage(@Param('id') id: string) {
+    const workspace = await this.workspacesService.findOne(id);
+    return {
+      data: {
+        aiTasksToday: workspace.aiTasksToday || 0,
+        aiTasksResetAt: workspace.aiTasksResetAt,
+        plan: workspace.plan,
+      },
+    };
   }
 }

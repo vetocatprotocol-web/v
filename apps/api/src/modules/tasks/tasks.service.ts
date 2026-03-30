@@ -4,6 +4,7 @@ import { tasks, workspaces, workspaceMembers, agents } from '../../database/sche
 import { eq, and, desc, inArray } from 'drizzle-orm';
 import { AgentsService } from '../agents/agents.service';
 import { EventsGateway } from '../events/events.gateway';
+import { WorkspacesService } from '../workspaces/workspaces.service';
 import { DATABASE_CONNECTION } from '../../database/database.module';
 
 @Injectable()
@@ -12,6 +13,7 @@ export class TasksService {
     @Inject(DATABASE_CONNECTION) private db: ReturnType<typeof drizzle>,
     private agentsService: AgentsService,
     private eventsGateway: EventsGateway,
+    private workspacesService: WorkspacesService,
   ) {}
 
   async create(createTaskDto: {
@@ -39,6 +41,7 @@ export class TasksService {
       title: createTaskDto.title,
       description: createTaskDto.description,
       type: createTaskDto.type as any || 'manual',
+      status: 'pending',
       priority: createTaskDto.priority as any || 'medium',
       input: createTaskDto.input || {},
       agentId: createTaskDto.agentId || null,
@@ -46,7 +49,7 @@ export class TasksService {
       createdBy: userId,
     }).returning();
 
-    console.log('Created task:', newTask[0]);
+    this.eventsGateway.emitTaskCreated(createTaskDto.workspaceId, newTask[0]);
 
     return newTask[0];
   }
@@ -74,7 +77,11 @@ export class TasksService {
       }
     }
 
-    return this.db.select().from(tasks).where(and(...conditions)).orderBy(desc(tasks.createdAt));
+    if (conditions.length > 0) {
+      return this.db.select().from(tasks).where(and(...conditions)).orderBy(desc(tasks.createdAt));
+    }
+
+    return this.db.select().from(tasks).orderBy(desc(tasks.createdAt));
   }
 
   async findOne(id: string, userId?: string) {
@@ -150,11 +157,18 @@ export class TasksService {
       let result;
 
       if (task.type === 'agent' && task.agentId) {
+        // Check and reset daily AI usage
+        await this.workspacesService.resetAiTasksIfNeeded(task.workspaceId);
+        await this.workspacesService.ensureAiTaskAllowed(task.workspaceId);
+
         // Emit agent started
         this.eventsGateway.emitAgentStarted(task.workspaceId, id, task.agentId);
 
         // Execute AI agent
         result = await this.agentsService.executeAgent(task.agentId, task.input, task.workspaceId, id);
+
+        // Increment AI task counters
+        await this.workspacesService.incrementAiTasks(task.workspaceId, 1);
 
         // Emit agent completed
         this.eventsGateway.emitAgentCompleted(task.workspaceId, id, task.agentId, result.output);
