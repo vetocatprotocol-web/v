@@ -13,6 +13,8 @@ import { IntegrationsModule } from './modules/integrations/integrations.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { SystemModule } from './modules/system/system.module';
 import { MarketplaceModule } from './modules/marketplace/marketplace.module';
+import { ObservabilityModule } from './modules/observability/observability.module';
+import { CommandModule } from './modules/command/command.module';
 
 @Module({
   imports: [
@@ -30,6 +32,8 @@ import { MarketplaceModule } from './modules/marketplace/marketplace.module';
     BillingModule,
     SystemModule,
     MarketplaceModule,
+    ObservabilityModule,
+    CommandModule,
   ],
 })
 export class AppModule {}

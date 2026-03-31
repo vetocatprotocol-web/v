@@ -7,5 +7,6 @@ import { WorkspacesService } from './workspaces.service';
   imports: [DatabaseModule],
   controllers: [WorkspacesController],
   providers: [WorkspacesService],
+  exports: [WorkspacesService],
 })
 export class WorkspacesModule {}

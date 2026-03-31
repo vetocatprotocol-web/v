@@ -3,12 +3,14 @@ import { tasks } from '../../database/schema';
 import { AgentsService } from '../agents/agents.service';
 import { EventsGateway } from '../events/events.gateway';
 import { WorkspacesService } from '../workspaces/workspaces.service';
+import { ObservabilityService } from '../observability/observability.service';
 export declare class TasksService {
     private db;
     private agentsService;
     private eventsGateway;
     private workspacesService;
-    constructor(db: ReturnType<typeof drizzle>, agentsService: AgentsService, eventsGateway: EventsGateway, workspacesService: WorkspacesService);
+    private observabilityService;
+    constructor(db: ReturnType<typeof drizzle>, agentsService: AgentsService, eventsGateway: EventsGateway, workspacesService: WorkspacesService, observabilityService: ObservabilityService);
     create(createTaskDto: {
         workspaceId: string;
         title: string;

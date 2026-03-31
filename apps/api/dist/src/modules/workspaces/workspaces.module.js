@@ -19,6 +19,7 @@ exports.WorkspacesModule = WorkspacesModule = __decorate([
         imports: [database_module_1.DatabaseModule],
         controllers: [workspaces_controller_1.WorkspacesController],
         providers: [workspaces_service_1.WorkspacesService],
+        exports: [workspaces_service_1.WorkspacesService],
     })
 ], WorkspacesModule);
 //# sourceMappingURL=workspaces.module.js.map

@@ -14,14 +14,16 @@ const tasks_controller_1 = require("./tasks.controller");
 const tasks_service_1 = require("./tasks.service");
 const agents_module_1 = require("../agents/agents.module");
 const workspaces_module_1 = require("../workspaces/workspaces.module");
+const observability_module_1 = require("../observability/observability.module");
 let TasksModule = class TasksModule {
 };
 exports.TasksModule = TasksModule;
 exports.TasksModule = TasksModule = __decorate([
     (0, common_1.Module)({
-        imports: [database_module_1.DatabaseModule, events_module_1.EventsModule, agents_module_1.AgentsModule, workspaces_module_1.WorkspacesModule],
+        imports: [database_module_1.DatabaseModule, events_module_1.EventsModule, agents_module_1.AgentsModule, workspaces_module_1.WorkspacesModule, observability_module_1.ObservabilityModule],
         controllers: [tasks_controller_1.TasksController],
         providers: [tasks_service_1.TasksService],
+        exports: [tasks_service_1.TasksService],
     })
 ], TasksModule);
 //# sourceMappingURL=tasks.module.js.map

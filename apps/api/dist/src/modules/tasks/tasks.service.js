@@ -19,13 +19,15 @@ const drizzle_orm_1 = require("drizzle-orm");
 const agents_service_1 = require("../agents/agents.service");
 const events_gateway_1 = require("../events/events.gateway");
 const workspaces_service_1 = require("../workspaces/workspaces.service");
+const observability_service_1 = require("../observability/observability.service");
 const database_module_1 = require("../../database/database.module");
 let TasksService = class TasksService {
-    constructor(db, agentsService, eventsGateway, workspacesService) {
+    constructor(db, agentsService, eventsGateway, workspacesService, observabilityService) {
         this.db = db;
         this.agentsService = agentsService;
         this.eventsGateway = eventsGateway;
         this.workspacesService = workspacesService;
+        this.observabilityService = observabilityService;
     }
     async create(createTaskDto, userId) {
         const member = await this.db.select()
@@ -48,6 +50,7 @@ let TasksService = class TasksService {
             createdBy: userId,
         }).returning();
         this.eventsGateway.emitTaskCreated(createTaskDto.workspaceId, newTask[0]);
+        this.observabilityService.increment('http_requests_total');
         return newTask[0];
     }
     async findAll(workspaceId, userId) {
@@ -131,9 +134,11 @@ let TasksService = class TasksService {
                 this.eventsGateway.emitAgentStarted(task.workspaceId, id, task.agentId);
                 result = await this.agentsService.executeAgent(task.agentId, task.input, task.workspaceId, id);
                 await this.workspacesService.incrementAiTasks(task.workspaceId, 1);
+                this.observabilityService.increment('agent_executions_total');
                 this.eventsGateway.emitAgentCompleted(task.workspaceId, id, task.agentId, result.output);
             }
             else {
+                this.observabilityService.increment('task_executions_total');
                 this.eventsGateway.emitTaskProgress(task.workspaceId, id, 50, 'Processing manual task...');
                 await new Promise(resolve => setTimeout(resolve, 2000));
                 result = {
@@ -171,6 +176,7 @@ exports.TasksService = TasksService = __decorate([
     __param(0, (0, common_1.Inject)(database_module_1.DATABASE_CONNECTION)),
     __metadata("design:paramtypes", [void 0, agents_service_1.AgentsService,
         events_gateway_1.EventsGateway,
-        workspaces_service_1.WorkspacesService])
+        workspaces_service_1.WorkspacesService,
+        observability_service_1.ObservabilityService])
 ], TasksService);
 //# sourceMappingURL=tasks.service.js.map

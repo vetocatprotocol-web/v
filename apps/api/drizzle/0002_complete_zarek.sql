@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS "agents" (
 	"version" varchar(20) DEFAULT '1.0.0' NOT NULL,
 	"status" "agent_status" DEFAULT 'active' NOT NULL,
 	"config" jsonb DEFAULT '{}'::jsonb NOT NULL,
-	"permissions" text[] DEFAULT ,
+	"permissions" text[] DEFAULT '{}',
 	"price_per_execution" numeric(10, 4) DEFAULT '0',
 	"is_marketplace" boolean DEFAULT false,
 	"category" varchar(50),

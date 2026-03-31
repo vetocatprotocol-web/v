@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Request, HttpCode } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -38,6 +38,7 @@ export class TasksController {
 
   @Post(':id/execute')
   @UseGuards(JwtAuthGuard)
+  @HttpCode(200)
   execute(@Param('id') id: string, @Request() req) {
     return this.tasksService.executeTask(id, req.user.userId);
   }

@@ -5,6 +5,7 @@ import { eq, and, desc, inArray } from 'drizzle-orm';
 import { AgentsService } from '../agents/agents.service';
 import { EventsGateway } from '../events/events.gateway';
 import { WorkspacesService } from '../workspaces/workspaces.service';
+import { ObservabilityService } from '../observability/observability.service';
 import { DATABASE_CONNECTION } from '../../database/database.module';
 
 @Injectable()
@@ -14,6 +15,7 @@ export class TasksService {
     private agentsService: AgentsService,
     private eventsGateway: EventsGateway,
     private workspacesService: WorkspacesService,
+    private observabilityService: ObservabilityService,
   ) {}
 
   async create(createTaskDto: {
@@ -50,6 +52,7 @@ export class TasksService {
     }).returning();
 
     this.eventsGateway.emitTaskCreated(createTaskDto.workspaceId, newTask[0]);
+    this.observabilityService.increment('http_requests_total');
 
     return newTask[0];
   }
@@ -169,10 +172,12 @@ export class TasksService {
 
         // Increment AI task counters
         await this.workspacesService.incrementAiTasks(task.workspaceId, 1);
+        this.observabilityService.increment('agent_executions_total');
 
         // Emit agent completed
         this.eventsGateway.emitAgentCompleted(task.workspaceId, id, task.agentId, result.output);
       } else {
+        this.observabilityService.increment('task_executions_total');
         // Emit task progress
         this.eventsGateway.emitTaskProgress(task.workspaceId, id, 50, 'Processing manual task...');
 

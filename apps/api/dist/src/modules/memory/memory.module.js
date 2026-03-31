@@ -10,11 +10,13 @@ exports.MemoryModule = void 0;
 const common_1 = require("@nestjs/common");
 const memory_service_1 = require("./memory.service");
 const memory_controller_1 = require("./memory.controller");
+const database_module_1 = require("../../database/database.module");
 let MemoryModule = class MemoryModule {
 };
 exports.MemoryModule = MemoryModule;
 exports.MemoryModule = MemoryModule = __decorate([
     (0, common_1.Module)({
+        imports: [database_module_1.DatabaseModule],
         providers: [memory_service_1.MemoryService],
         controllers: [memory_controller_1.MemoryController],
     })

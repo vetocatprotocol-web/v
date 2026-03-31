@@ -22,6 +22,8 @@ const integrations_module_1 = require("./modules/integrations/integrations.modul
 const billing_module_1 = require("./modules/billing/billing.module");
 const system_module_1 = require("./modules/system/system.module");
 const marketplace_module_1 = require("./modules/marketplace/marketplace.module");
+const observability_module_1 = require("./modules/observability/observability.module");
+const command_module_1 = require("./modules/command/command.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -42,6 +44,8 @@ exports.AppModule = AppModule = __decorate([
             billing_module_1.BillingModule,
             system_module_1.SystemModule,
             marketplace_module_1.MarketplaceModule,
+            observability_module_1.ObservabilityModule,
+            command_module_1.CommandModule,
         ],
     })
 ], AppModule);
